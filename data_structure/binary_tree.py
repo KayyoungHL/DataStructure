@@ -45,11 +45,11 @@ class BinaryTreeNode(aBinaryTreeNode):
         self.__left = left
         self.__right = right
         self.__key = value
-    
+
 
     def __str__(self):
         return str(self.__key)  # or f"TreeNode(key = {self.__key})"
-    
+
 
     def __repr__(self):
         return str(self.__key)
@@ -58,17 +58,17 @@ class BinaryTreeNode(aBinaryTreeNode):
     @property
     def key(self): 
         return self.__key
-    
+
 
     @key.setter
     def key(self, value):
         self.__key = value
-    
+
 
     @property
     def parent(self):
         return self.__parent
-    
+
 
     @parent.setter ## None으로 자르는 기능을 넣기 보다 split를 쓰게 만들까? 안 그러면 잘라낸 노드를 잃어버린다.
     def parent(self, node=None): 
@@ -91,7 +91,7 @@ class BinaryTreeNode(aBinaryTreeNode):
             self.parent = None
             return self, x.find_root()
         else: raise ValueError("Unexpected input error. This node is root node. split function is only for node which has parent node(not root node)")
-    
+
 
     def find_root(self, count=False):
         if count:
@@ -104,12 +104,12 @@ class BinaryTreeNode(aBinaryTreeNode):
             while self.__parent != None: 
                 self = self.__parent
             return self
-            
-    
+
+
     @property
     def left(self):
         return self.__left
-    
+
 
     @left.setter ## None으로 자르는 기능을 넣기 보다 split를 쓰게 만들까? 안 그러면 잘라낸 노드를 잃어버린다.
     def left(self, node):
@@ -125,34 +125,34 @@ class BinaryTreeNode(aBinaryTreeNode):
                 node.__parent = self
                 self.__left = node
         else: raise TypeError(f"left Type MUST be BinaryTreeNode(not {type(node).__name__})")
-    
+
 
     @property
     def right(self):
         return self.__right
-    
+
 
     @right.setter ## None으로 자르는 기능을 넣기 보다 split를 쓰게 만들까? 안 그러면 잘라낸 노드를 잃어버린다.
     def right(self, node):
-        if (type(node) == BinaryTreeNode)|(node==None): 
+        if (type(node) == type(self))|(node==None): 
             if node == None:
-                if not self.__right == None: self.__right.__parent, self.__right  = None, None
+                if self.__right: self.__right.__parent, self.__right  = None, None
             else:
-                if not self.__right == None: self.__right.__parent = None
-                if not node.__parent == None:
-                    if node.__parent.__left == node: node.__parent.__left = None
+                if self.__right: self.__right.__parent = None
+                if node.__parent:
+                    if node.__parent.__left is node: node.__parent.__left = None
                     else: node.__parent.__right = None
                 node.__parent = self
                 self.__right = node
         else: raise TypeError(f"right Type MUST be BinaryTreeNode(not {type(node).__name__})")
-    
+
 ###########################################################################
 class aBinaryTree(metaclass=ABCMeta):
     @property
     @abstractmethod
     def root(self):
         pass
-    
+
 
     @abstractmethod
     def traversal(self):
@@ -163,7 +163,7 @@ class BinaryTree(aBinaryTree):
     """[summary]
 
     Attributes : root
-    
+
     Methods : traversal(kind="inorder")
     """
     def __init__(self, node=None, set_root="find"):
@@ -171,15 +171,15 @@ class BinaryTree(aBinaryTree):
         # set_root = "split"면 부모노드와 분리한 후 해당 노드를 root로 만들고 BT 생성
         self.__set_root = set_root
         self.root = node
-        
+
 
     def __str__(self):
         return f"BinaryTree({self.traversal()})"
-    
+
 
     def __repr__(self): 
         return str(self.traversal())
-    
+
 
     def __len__(self):
         return len(self.traversal())
@@ -188,7 +188,7 @@ class BinaryTree(aBinaryTree):
     @property
     def set_root(self):
         return self.__set_root
-    
+
 
     @set_root.setter
     def set_root(self, way):
@@ -201,18 +201,23 @@ class BinaryTree(aBinaryTree):
         return self.__root
 
 
+    def __check_type(self, node):
+        return type(node) == BinaryTreeNode
+
+
     @root.setter
     def root(self, node):
-        if (type(node) == BinaryTreeNode)|(node==None): 
-            if (node==None) : self.__root = node
-            else:
-                if not node.parent == None:
+        if (self.__check_type(node))|(node==None): 
+            if node:
+                if node.parent:
                     if self.__set_root == "find":
                         warnings.warn("This node has parent. Should find root node.",UserWarning)
                         node, count = node.find_root(count=True)
                         warnings.warn(f"To find root node, it has gone up {count} level",UserWarning)
                     elif self.__set_root == "split": ## 기존 루트 노드를 잃으면 어떡하지..? 방법을 찾아야하는데...
                         node.parent = None
+                self.__root = node
+            else: 
                 self.__root = node
         else: raise TypeError(f"root Type MUST be BinaryTreeNode(not {type(node).__name__})")
 
@@ -227,40 +232,42 @@ class BinaryTree(aBinaryTree):
             list: list of traversed keys sorted by 'kind'
         """
         return_list = []
-        if kind == "inorder": ## SOLID에서 어떤 것을 위반 했는가! 알아봅시다. 어떤 디자인 패턴이 좋을지도 확인을 한 번...
-            self.__inorder(self.__root, return_list)
-        elif kind == "preorder":
-            self.__preorder(self.__root, return_list)
-        elif kind == "postorder":
-            self.__postorder(self.__root, return_list)
-        else:
-            raise KeyError(f"Can't find key : '{kind}'. Key MUST be in ['inorder', 'preorder', 'postorder']")
+        command = {
+            "inorder": self.__inorder,
+            "preorder": self.__preorder,
+            "postorder": self.__postorder
+        }
+        if self.__root:
+            try:
+                command[kind](self.__root, return_list)
+            except:
+                raise KeyError(f"Can't find key : '{kind}'. Key MUST be in ['inorder', 'preorder', 'postorder']")
         return return_list
 
 
     @classmethod
     def __inorder(cls, node, return_list):
-        if not node.left == None:
+        if node.left:
             cls.__inorder(node.left, return_list)
         return_list.append(node)
-        if not node.right == None:
+        if node.right:
             cls.__inorder(node.right, return_list)
 
 
     @classmethod
     def __preorder(cls, node, return_list):
         return_list.append(node)
-        if not node.left == None:
+        if node.left:
             cls.__preorder(node.left, return_list)
-        if not node.right == None:
+        if node.right:
             cls.__preorder(node.right, return_list)
 
 
     @classmethod
     def __postorder(cls, node, return_list):
-        if not node.left == None:
+        if node.left:
             cls.__postorder(node.left, return_list)
-        if not node.right == None:
+        if node.right:
             cls.__postorder(node.right, return_list)
         return_list.append(node)
 
@@ -284,7 +291,7 @@ class BinarySearchTree(BinaryTree):
         super().__init__(node) ## 이런식으로 노드를 받으면 당연히 BST 자료형이 아니다.
         self.__make_binary_search_tree() ## 현재 계획에서 5-1을 적용해야한다.. 쓰읍...
         self.__size = len(self.traversal())
-    
+
 
     def __len__(self):
         return self.__size
@@ -297,7 +304,7 @@ class BinarySearchTree(BinaryTree):
     @property
     def size(self):
         return self.__size
-    
+
 
     def __make_binary_search_tree(self): 
         """이미 이진트리노드가 다른 노드와 연결 되어 있을 경우
@@ -314,89 +321,219 @@ class BinarySearchTree(BinaryTree):
             self.set_root="split"
             self.root = sorted_node_list[n//2]
             self.__make_inorder(self.root, 0, n//2, n-1, sorted_node_list)
-        
-        
+
+
     @classmethod
     def __make_inorder(cls, node, start, mid, end, node_list):
-        if not start == mid:
+        if start == mid:
+            node.left = None
+        else: 
             node.left = node_list[(start+mid)//2]
             cls.__make_inorder(node.left, start = start, mid = (start+mid)//2, end = mid-1, node_list = node_list)
+        if mid == end:
+            node.right = None
         else: 
-            node.left = None
-        if not mid == end:
             node.right = node_list[(mid+end)//2+1]
             cls.__make_inorder(node.right, start = mid+1, mid = (mid+end)//2+1, end = end, node_list = node_list)
-        else: 
-            node.right = None
 
 
-    def find_loc(self, value): ## TF를 남겨 놔야하나?? 헷갈리네... insert, delete 보고 생각함.
+    def find_loc(self, value):
+        """
+            value가 있으면 해당 노드를 return,
+            value가 없으면 해당 노드를 생성할 자리의 부모 노드를 return
+        """
         node = self.root
-        chk = "root"
-        if node == None: return None, chk
-        while node.key != value:
-            if value > node.key:
-                chk = "right"
-                if not node.right == None:
-                    node = node.right
-                else: return node, chk
-            elif value < node.key:
-                chk = "left"
-                if not node.left == None:
-                    node = node.left
-                else: return node, chk
-        return node, "exist_"+chk
-    
+        if node:
+            while node.key != value:
+                if value > node.key:
+                    if node.right:
+                        node = node.right
+                    else: 
+                        return node
+                elif value < node.key:
+                    if node.left:
+                        node = node.left
+                    else: 
+                        return node
+        return node
+
 
     def search(self, value):
-        node, chk = self.find_loc(value)
-        if not chk[:5] == "exist": return None
-        else: return node
-    
-    
-    def insert(self, value):
-        node, chk = self.find_loc(value)
-        node_inserted = BinaryTreeNode(value)
-        if chk == "right":
-            right = node.right
-            node.right = node_inserted
-            node_inserted.right = right
-        elif (chk == "left") | (chk[:5] == "exist"):
-            left = node.left
-            node.left = node_inserted
-            node_inserted.left = left
-        elif (chk == "root"):
-            self.root = node_inserted
-        self.__size += 1
+        node = self.find_loc(value)
+        if node:
+            if node.key == value:
+                return node
+        return None
 
+
+    def __make_node(self, value):   ## 노드를 생성한다. overring 해서 사용할 것
+        return BinaryTreeNode(value)
+
+
+    def insert(self, value):
+        new_node = self.__make_node(value)
+        node = self.find_loc(value)
+        node = self.__insert(new_node, node, value)
     
+    def __insert(self, new_node, node, value):
+        if node.key < value:
+            right = node.right
+            node.right = new_node
+            new_node.right = right
+        elif node.key >= value:
+            left = node.left
+            node.left = new_node
+            new_node.left = left
+        elif node is self.root:
+            self.root = new_node
+        self.__size += 1
+        return node
+
     def delete(self, value):
-        node, chk = self.find_loc(value)
-        if not chk[:5] == "exist":
-            return None
+        node = self.find_loc(value)
+        if node:
+            node, _ = self.__delete(node)
         else:
-            x = node.left ## x는 삭제할 노드의 자리를 대신 할 노드.
-            if not x == None: ## 노드의 왼쪽이 None이 아니면
-                while x.right!=None: x = x.right # 삭제할 노드보다 작은 수 중 가장 큰 수를 키로 갖는 노드 찾아 x가 참조한다.
-                y = x.left # y는 x의 왼쪽 노드트리
-                x.parent.right = y ## 삭제할 노드자리로 옮길 노드의 왼쪽을 트리를 부모노드의 오른쪽에 붙인다.
-                x.left = node.left ## 삭제할 노드의 왼쪽 트리를 x 노드의 왼쪽으로 붙인다.
-                x.right = node.right ## 삭제할 노드의 오른쪽 트리를 x노드의 오른쪽으로 붙인다.
-            if (chk == "exist_left"): node.parent.left = x
-            elif (chk == "exist_right"): node.parent.right = x
-            elif (chk == "exist_root"): self.root = x
-            # del node #del을 하던 return을 하던 마음대로!
-            return node              
+            raise ValueError(f"Value:{value} is not in Tree")
+        return node
+    
+    def __delete(self, node):
+        r"""
+        node: 삭제할 노드
+        x: 삭제할 노드의 자리를 대신 할 노드
+        y: x의 왼쪽 서브트리의 head node
+        z: x의 부모 노드
+
+            node
+           /    \
+         ...    ...
+           \ 
+            z
+           / \
+         ...  x
+             /
+            y
+
+        """
+        if node.left:                           ### 1. 노드의 왼쪽이 None이 아니면
+            x = node.left                       # x는 삭제할 노드의 자리를 대신 할 노드.
+            while x.right: 
+                x = x.right                     # 삭제할 노드보다 작은 수 중 가장 큰 수를 키로 갖는 노드 찾아 x가 참조한다.
+            y = x.left                          # y는 x의 왼쪽 서브트리의 head
+            z = x.parent                        # z는 옮기기 전 x의 부모 노드
+            if z.right is x:
+                z.right = y                     # 삭제할 노드자리로 옮길 노드(x)의 왼쪽 트리(y)를 부모노드(z)의 오른쪽에 붙인다.
+            else:                               # 만약 x가 z의 왼쪽 노드라면 y를 z의 왼쪽으로 붙인다.
+                z.left = y               
+            x.left = node.left                  # 삭제할 노드의 왼쪽 트리를 x 노드의 왼쪽으로 붙인다.
+            x.right = node.right                # 삭제할 노드의 오른쪽 트리를 x노드의 오른쪽으로 붙인다.
+
+        elif node.right:                        ### 2. 노드의 왼쪽이 None이고 오른쪽이 None이 아니면
+            x = node.right                      # 마찬가지로 x는 삭제할 노드의 자리를 대신 할 노드
+            while x.left:                       # 삭제할 노드보다 큰 수 중 가장 작은 수를 키로 갖는 노드를 x
+                x = x.left
+            y = x.right                         # y는 x의 오른쪽 서브트리의 head
+            z = x.parent
+            if z.left is x:
+                z.left = y                      # x의 오른쪽 트리 y를 z의 왼쪽에 붙인다.
+            else:                               # 만약 x가 z의 오른쪽 노드라면 y를 z의 오른쪽으로 붙인다.
+                z.right = y
+            x.left = node.left                  # 반복
+            x.right = node.right                # 반복
+        
+        else:                                   ### 3. 둘 다 None일 경우, 대체할 x가 없다. None을 반환
+            x = None
+            z = node.parent                     # z는 삭제할 노드의 부모노드가 된다.
+
+        if node.parent is None: self.root = x
+        elif node.parent.left is node: node.parent.left = x
+        elif node.parent.right is node: node.parent.right = x
+        # del node #del을 하던 return을 하던 마음대로!
+        self.__size -= 1
+        return node, z
+
 
 
 ###########################################################################
 # AVL? 로테이션 돌리는 방식인가 그랬는데...
 # • G.M. Adelson-Velskii, E.M. Landis
-class AVL: 
-    """높이 구하는 방법을 구하기 전 까지 풀 수 없다고 본다...
+class AVLNode(BinaryTreeNode):
+    def __init__(self, value, parent=None, left=None, right=None):
+        super().__init__(value, parent, left, right)
+        self.height_renew()
+
+
+    def height_renew(self):
+        if self.__left:
+            height_left = self.__left.height
+        else:
+            height_left = 0
+        if self.__right:
+            height_right = self.__right.height
+        else:
+            height_right = 0
+        self.__lr = height_left - height_right
+        self.__height = max(height_left, height_right) + 1
+
+
+    @property
+    def lr(self):
+        return self.__lr
+
+
+    @property
+    def height(self):
+        return self.__height
+
+
+class AVL(BinarySearchTree): 
+    """
+    높이 구하는 방법을 구하기 전 까지 풀 수 없다고 본다...
     집 가서 높이를 어떻게 구해서 어떻게 balance가 깨졌는 지 확인하는 지 알아보자.
     """
-    pass
+    def __str__(self):
+        return f"AVL({self.traversal()})"
+
+
+    def __check_type(self, node):
+        return type(node) == AVLNode
+
+
+    def __make_node(self, value):   ## 노드를 생성한다. overring 해서 사용할 것
+        return AVLNode(value)
+    
+
+    def __make_balance(self, node):
+        node.height_renew()
+        while node.parent:
+            node = node.parent
+            node.height_renew()
+            if (node.lr >= 2) | (node.lr <= -2):
+                self.__rotation(node)
+
+    
+    def __rotation(self, node):
+        ...
+        
+    
+    def insert(self, value):
+        new_node = self.__make_node(value)
+        node = self.find_loc(value)
+        node = self.__insert(new_node, node, value)
+        self.__make_balance(node)
+
+
+    def delete(self, value):
+        node = self.find_loc(value)
+        if node:
+            node, node_bal = self.__delete(node)
+            self.__make_balance(node_bal)
+        else:
+            raise ValueError(f"Value:{value} is not in Tree")
+        return node
+
+
+
     
 ###########################################################################
 
@@ -461,10 +598,12 @@ def __main2():
     k.insert(13)
     k.insert(4)
     print(len(k), k.traversal())
-    k.delete(8)
+    k.delete(7)
+    print(len(k), k.traversal())
     k.delete(4)
     k.delete(0)
     print(k.traversal())
+    k.delete(21)
     print(list(map(lambda x:x.parent,k.traversal())))
 
     """
@@ -478,9 +617,32 @@ def __main2():
     # print(list(map(lambda x:x.parent,k.traversal())))
 
 def __main3():
-    pass
-
+    x = BinaryTreeNode(0)
+    x.left = BinaryTreeNode(1)
+    x.left.left = BinaryTreeNode(3)
+    x.right = BinaryTreeNode(2)
+    x.right.right = BinaryTreeNode(5)
+    x.right.right.left = BinaryTreeNode(7)
+    k = BinarySearchTree(x)
+    print(len(k), k.traversal())
+    print(list(map(lambda x:x.parent,k.traversal())))
+    k.delete(3)
+    k.insert(3)
+    print(len(k), k.traversal())
+    print(list(map(lambda x:x.parent,k.traversal())))
+    k.delete(7)
+    print(len(k), k.traversal())
+    print(list(map(lambda x:x.parent,k.traversal())))
+    k.delete(2)
+    print(len(k), k.traversal())
+    k.delete(0)
+    print(len(k), k.traversal())
+    k.delete(5)
+    print(len(k), k.traversal())
+    k.delete(1)
+    print(len(k), k.traversal())
 
 if __name__ == "__main__":
     # __main()
-    __main2()
+    # __main2()
+    __main3()
